@@ -15,10 +15,14 @@ export const verifyToken = (token) => {
 
 export const getCookieOptions = () => {
   const isProduction = ENV.NODE_ENV === 'production';
+  const sameSite = String(ENV.COOKIE_SAME_SITE || (isProduction ? 'none' : 'lax')).toLowerCase();
+  const isNone = sameSite === 'none';
+  const isSecure = ENV.COOKIE_SECURE || isProduction || isNone;
+
   return {
     httpOnly: true,
-    secure: ENV.COOKIE_SECURE || isProduction,
-    sameSite: ENV.COOKIE_SAME_SITE, // 'lax' works nicely across browsers & local dev
+    secure: isSecure,
+    sameSite: isNone ? 'none' : sameSite,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: '/',
   };

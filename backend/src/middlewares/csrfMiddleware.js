@@ -8,10 +8,14 @@ export const CSRF_COOKIE_NAME = 'dhaantrack_csrf';
  */
 export const getCsrfCookieOptions = () => {
   const isProduction = ENV.NODE_ENV === 'production';
+  const sameSite = String(ENV.COOKIE_SAME_SITE || (isProduction ? 'none' : 'lax')).toLowerCase();
+  const isNone = sameSite === 'none';
+  const isSecure = ENV.COOKIE_SECURE || isProduction || isNone;
+
   return {
     httpOnly: false, // Accessible by frontend JS so Axios/SWR can read it
-    secure: ENV.COOKIE_SECURE || isProduction,
-    sameSite: ENV.COOKIE_SAME_SITE,
+    secure: isSecure,
+    sameSite: isNone ? 'none' : sameSite,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };

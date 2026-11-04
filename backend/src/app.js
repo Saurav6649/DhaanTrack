@@ -23,15 +23,50 @@ app.use(
   })
 );
 
-// CORS configuration
+// Compile and validate allowed CORS origins
+const isOriginAllowed = (origin) => {
+  // Allow requests without Origin header (e.g. server-to-server, mobile native, curl, supertest)
+  if (!origin) return true;
+
+  const cleanOrigin = origin.trim().replace(/\/+$/, '');
+
+  // Extract origins configured in environment variables (support comma-separated list)
+  const configuredOrigins = (ENV.FRONTEND_URL || '')
+    .split(',')
+    .map((url) => url.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+  const allowedExactOrigins = [
+    ...configuredOrigins,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ];
+
+  if (allowedExactOrigins.includes(cleanOrigin)) {
+    return true;
+  }
+
+  // Allow DhaanTrack Vercel production and preview subdomains (e.g. https://dhaantrack.vercel.app, https://dhaantrack-*.vercel.app)
+  if (/^https:\/\/dhaantrack[a-zA-Z0-9-]*\.vercel\.app$/.test(cleanOrigin)) {
+    return true;
+  }
+
+  return false;
+};
+
+// CORS configuration (strictly restricted to authorized origins)
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or same-origin)
-      if (!origin || origin === ENV.FRONTEND_URL || origin === 'http://localhost:5173') {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(null, true); // Dev-friendly fallback
+        if (process.env.NODE_ENV !== 'test') {
+          console.warn(`[CORS] Rejected request from unauthorized origin: ${origin}`);
+        }
+        callback(null, false);
       }
     },
     credentials: true,

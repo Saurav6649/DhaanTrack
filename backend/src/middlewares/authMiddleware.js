@@ -12,6 +12,11 @@ export const authenticate = async (req, res, next) => {
     }
 
     if (!token) {
+      if (process.env.NODE_ENV !== 'test') {
+        const hasCookie = Boolean(req.cookies?.[COOKIE_NAME]);
+        const hasBearer = Boolean(req.headers.authorization?.startsWith('Bearer '));
+        console.warn(`[Auth] Authentication required for ${req.method} ${req.originalUrl || req.path} (Cookie: ${hasCookie}, Bearer: ${hasBearer}, Origin: ${req.headers.origin || 'none'})`);
+      }
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please login.',
@@ -22,6 +27,9 @@ export const authenticate = async (req, res, next) => {
     try {
       decoded = verifyToken(token);
     } catch (err) {
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn(`[Auth] Session verification failed for ${req.method} ${req.originalUrl || req.path}: ${err.message}`);
+      }
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired session. Please log in again.',

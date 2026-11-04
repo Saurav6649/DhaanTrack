@@ -20,8 +20,10 @@ export const login = async (req, res, next) => {
       data: {
         user,
         csrfToken,
+        token,
       },
       csrfToken,
+      token,
     });
   } catch (error) {
     next(error);

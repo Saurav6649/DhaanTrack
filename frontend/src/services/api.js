@@ -2,7 +2,12 @@ import axios from 'axios';
 
 // Resolve API base URL from Vite environment variables (fallback to localhost:5000/api for local dev)
 const rawBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-export const API_BASE_URL = rawBaseURL.replace(/\/+$/, '');
+// Normalize: ensure it ends with /api to match backend routes
+let normalizedBase = rawBaseURL.replace(/\/+$/, '');
+if (!normalizedBase.endsWith('/api')) {
+  normalizedBase = `${normalizedBase}/api`;
+}
+export const API_BASE_URL = normalizedBase;
 
 // Cookie extractor helper (for CSRF token)
 export const getCookie = (name) => {
@@ -26,6 +31,46 @@ export const setCsrfToken = (token) => {
 
 export const clearCsrfToken = () => {
   memoryCsrfToken = null;
+};
+
+// Cross-domain authentication fallback (persists token in memory & sessionStorage for refresh survival)
+const AUTH_STORAGE_KEY = 'dhaantrack_auth_token';
+let memoryAuthToken = null;
+
+export const getAuthToken = () => {
+  if (memoryAuthToken) return memoryAuthToken;
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      const stored = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) {
+        memoryAuthToken = stored;
+        return stored;
+      }
+    } catch (e) {
+      // Ignore storage access errors
+    }
+  }
+  return null;
+};
+
+export const setAuthToken = (token) => {
+  if (token && typeof token === 'string') {
+    memoryAuthToken = token;
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        window.sessionStorage.setItem(AUTH_STORAGE_KEY, token);
+      } catch (e) {}
+    }
+  }
+};
+
+export const clearAuthToken = () => {
+  memoryAuthToken = null;
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch (e) {}
+  }
 };
 
 // Shared promise to prevent redundant parallel requests for CSRF token
@@ -95,6 +140,15 @@ api.interceptors.request.use(
     const method = (config.method || 'get').toLowerCase();
     const isStateChanging = ['post', 'put', 'patch', 'delete'].includes(method);
 
+    // Attach Bearer token for cross-domain cookie isolation fallback
+    const authToken = getAuthToken();
+    if (authToken) {
+      config.headers = config.headers || {};
+      if (!config.headers['Authorization']) {
+        config.headers['Authorization'] = `Bearer ${authToken}`;
+      }
+    }
+
     // Normalize endpoint path to check for exemptions
     const cleanUrl = (config.url || '').split('?')[0].replace(/\/+$/, '');
     const isExempt =
@@ -160,6 +214,12 @@ api.interceptors.response.use(
       } catch (retryError) {
         console.error('CSRF token refresh and retry failed:', retryError);
       }
+    }
+
+    // If session is unauthenticated/expired, clear stored tokens
+    if (error.response?.status === 401) {
+      clearAuthToken();
+      clearCsrfToken();
     }
 
     const message =
