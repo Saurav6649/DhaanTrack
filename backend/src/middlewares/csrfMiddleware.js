@@ -1,6 +1,21 @@
 import crypto from 'crypto';
+import { ENV } from '../config/env.js';
 
 export const CSRF_COOKIE_NAME = 'dhaantrack_csrf';
+
+/**
+ * Common cookie options for CSRF token
+ */
+export const getCsrfCookieOptions = () => {
+  const isProduction = ENV.NODE_ENV === 'production';
+  return {
+    httpOnly: false, // Accessible by frontend JS so Axios/SWR can read it
+    secure: ENV.COOKIE_SECURE || isProduction,
+    sameSite: ENV.COOKIE_SAME_SITE,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  };
+};
 
 /**
  * Generate a random CSRF token
@@ -10,26 +25,21 @@ export const generateCsrfToken = () => {
 };
 
 /**
- * Middleware to ensure CSRF cookie is set on GET requests
+ * Middleware to ensure CSRF cookie is set on GET requests and header is exposed
  */
 export const attachCsrfToken = (req, res, next) => {
-  if (!req.cookies?.[CSRF_COOKIE_NAME]) {
-    const token = generateCsrfToken();
-    res.cookie(CSRF_COOKIE_NAME, token, {
-      httpOnly: false, // Accessible by frontend JS so Axios/SWR can send it in headers
-      secure: false, // Works in local dev and prod
-      sameSite: 'lax',
-      path: '/',
-    });
-    req.csrfToken = token;
-  } else {
-    req.csrfToken = req.cookies[CSRF_COOKIE_NAME];
+  let token = req.cookies?.[CSRF_COOKIE_NAME];
+  if (!token) {
+    token = generateCsrfToken();
+    res.cookie(CSRF_COOKIE_NAME, token, getCsrfCookieOptions());
   }
+  req.csrfToken = token;
+  res.setHeader('X-CSRF-Token', token);
   next();
 };
 
 /**
- * CSRF protection middleware for state-changing requests
+ * CSRF protection middleware for state-changing requests (POST, PUT, PATCH, DELETE)
  */
 export const verifyCsrf = (req, res, next) => {
   // Allow safe methods
@@ -37,12 +47,19 @@ export const verifyCsrf = (req, res, next) => {
     return next();
   }
 
-  // Exempt login & bootstrap endpoints from CSRF check (as cookie doesn't exist yet)
-  if (req.path === '/api/auth/login' || req.path === '/api/auth/bootstrap') {
+  // Normalize path to ignore query parameters and trailing slashes
+  const cleanPath = (req.originalUrl || req.path || '').split('?')[0].replace(/\/+$/, '');
+
+  // Exempt login, bootstrap, and logout endpoints from CSRF check
+  if (
+    cleanPath === '/api/auth/login' ||
+    cleanPath === '/api/auth/bootstrap' ||
+    cleanPath === '/api/auth/logout'
+  ) {
     return next();
   }
 
-  // If request uses Bearer token in header (e.g., API clients, mobile native, or automated tests), CSRF doesn't apply
+  // If request uses Bearer token in header (e.g. mobile native / API clients), CSRF check passes
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
     return next();
   }
@@ -53,6 +70,7 @@ export const verifyCsrf = (req, res, next) => {
   if (!cookieToken || !headerToken || cookieToken !== headerToken) {
     return res.status(403).json({
       success: false,
+      code: 'CSRF_INVALID',
       message: 'Invalid or missing CSRF token. Please refresh the page.',
     });
   }

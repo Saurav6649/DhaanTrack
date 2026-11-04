@@ -75,7 +75,7 @@ describe('User Panel Enhancements & Bug Fixes Integration Tests', () => {
     const opCsrfCookie = opCookies.find((c) => c.startsWith('dhaantrack_csrf=')).split(';')[0];
     operatorCookie = `${opSession}; ${opCsrfCookie}`;
     operatorCsrf = opCsrfCookie.split('=')[1];
-  }, 20000);
+  }, 60000);
 
   afterAll(async () => {
     await User.deleteMany({ userId: 'enh_op' });

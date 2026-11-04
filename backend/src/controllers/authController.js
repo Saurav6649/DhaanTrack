@@ -1,6 +1,6 @@
 import * as authService from '../services/authService.js';
 import { COOKIE_NAME, getCookieOptions } from '../utils/jwt.js';
-import { CSRF_COOKIE_NAME, generateCsrfToken } from '../middlewares/csrfMiddleware.js';
+import { CSRF_COOKIE_NAME, generateCsrfToken, getCsrfCookieOptions } from '../middlewares/csrfMiddleware.js';
 
 export const login = async (req, res, next) => {
   try {
@@ -11,12 +11,8 @@ export const login = async (req, res, next) => {
 
     // Use consistent CSRF token for frontend and cookie
     const csrfToken = req.csrfToken || req.cookies?.[CSRF_COOKIE_NAME] || generateCsrfToken();
-    res.cookie(CSRF_COOKIE_NAME, csrfToken, {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'lax',
-      path: '/',
-    });
+    res.cookie(CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions());
+    res.setHeader('X-CSRF-Token', csrfToken);
 
     res.json({
       success: true,
@@ -25,6 +21,7 @@ export const login = async (req, res, next) => {
         user,
         csrfToken,
       },
+      csrfToken,
     });
   } catch (error) {
     next(error);
@@ -32,8 +29,18 @@ export const login = async (req, res, next) => {
 };
 
 export const logout = async (req, res) => {
-  res.clearCookie(COOKIE_NAME, { path: '/' });
-  res.clearCookie(CSRF_COOKIE_NAME, { path: '/' });
+  res.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: getCookieOptions().secure,
+    sameSite: getCookieOptions().sameSite,
+    path: '/',
+  });
+  res.clearCookie(CSRF_COOKIE_NAME, {
+    httpOnly: false,
+    secure: getCsrfCookieOptions().secure,
+    sameSite: getCsrfCookieOptions().sameSite,
+    path: '/',
+  });
   res.json({
     success: true,
     message: 'Logged out successfully.',
@@ -59,15 +66,11 @@ export const changePassword = async (req, res, next) => {
 };
 
 export const getCsrfToken = (req, res) => {
-  let token = req.cookies?.[CSRF_COOKIE_NAME];
+  let token = req.cookies?.[CSRF_COOKIE_NAME] || req.csrfToken;
   if (!token) {
     token = generateCsrfToken();
-    res.cookie(CSRF_COOKIE_NAME, token, {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'lax',
-      path: '/',
-    });
   }
+  res.cookie(CSRF_COOKIE_NAME, token, getCsrfCookieOptions());
+  res.setHeader('X-CSRF-Token', token);
   res.json({ success: true, csrfToken: token });
 };

@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import useSWR, { mutate } from 'swr';
-import { api } from '../api/client.js';
+import { api, setCsrfToken, clearCsrfToken } from '../api/client.js';
 
 const AuthContext = createContext(null);
 
@@ -19,6 +19,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (userId, password) => {
     const res = await api.post('/api/auth/login', { userId, password });
     const loggedInUser = res.data?.data?.user;
+    const csrfToken = res.data?.csrfToken || res.data?.data?.csrfToken;
+    if (csrfToken) {
+      setCsrfToken(csrfToken);
+    }
     // Revalidate SWR me key with confirmed backend data
     await revalidateUser({ user: loggedInUser }, false);
     return loggedInUser;
@@ -30,6 +34,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       // Continue clearing local memory state
     }
+    clearCsrfToken();
     // Clear SWR in-memory cache
     await revalidateUser(null, false);
     // Clear all other cached data
