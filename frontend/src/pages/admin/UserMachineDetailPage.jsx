@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useSWR, { mutate } from 'swr';
-import { api } from '../../api/client.js';
+import api, { getApiUrl } from '../../services/api.js';
 import { Card, CardHeader } from '../../components/common/Card.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
@@ -47,7 +47,7 @@ export const UserMachineDetailPage = () => {
   const paymentHistory = data?.paymentHistory || [];
 
   const handleExportExcel = () => {
-    window.open(`/api/reports/user_wise/export?userId=${id}&${queryParams}`, '_blank');
+    window.open(getApiUrl(`/reports/user_wise/export?userId=${id}&${queryParams}`), '_blank');
   };
 
   const formatHours = (seconds = 0) => {

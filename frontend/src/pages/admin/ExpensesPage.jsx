@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { api } from '../../api/client.js';
+import api, { getApiUrl } from '../../services/api.js';
 import { Card } from '../../components/common/Card.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
@@ -40,7 +40,7 @@ export const ExpensesPage = () => {
   const totalExpenseSum = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
 
   const handleExportExcel = () => {
-    window.open(`/api/reports/expense/export?${queryParams}`, '_blank');
+    window.open(getApiUrl(`/reports/expense/export?${queryParams}`), '_blank');
   };
 
   return (

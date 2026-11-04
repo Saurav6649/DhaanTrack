@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { getApiUrl } from '../../services/api.js';
 import { Card, CardHeader } from '../../components/common/Card.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.jsx';
@@ -38,7 +39,7 @@ export const DashboardPage = () => {
   const stats = data;
 
   const handleExportExcel = () => {
-    const exportUrl = `/api/reports/work/export?${queryParams}`;
+    const exportUrl = getApiUrl(`/reports/work/export?${queryParams}`);
     window.open(exportUrl, '_blank');
   };
 

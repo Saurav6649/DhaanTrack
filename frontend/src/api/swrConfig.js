@@ -1,4 +1,4 @@
-import { api } from './client.js';
+import api from '../services/api.js';
 
 export const swrFetcher = async (url) => {
   const res = await api.get(url);

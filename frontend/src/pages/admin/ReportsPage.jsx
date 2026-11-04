@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import { getApiUrl } from '../../services/api.js';
 import { Card, CardHeader } from '../../components/common/Card.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.jsx';
@@ -97,7 +98,7 @@ export const ReportsPage = () => {
   const rows = reportData?.rows || [];
 
   const handleExportExcel = () => {
-    window.open(`/api/reports/${reportType}/export?${queryParams}`, '_blank');
+    window.open(getApiUrl(`/reports/${reportType}/export?${queryParams}`), '_blank');
   };
 
   const handleResetFilters = () => {
