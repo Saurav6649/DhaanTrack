@@ -10,6 +10,11 @@ import { apiLimiter } from './middlewares/rateLimiter.js';
 
 const app = express();
 
+// Configure Express trust proxy for Render / reverse proxies (1 hop)
+// This ensures express-rate-limit accurately identifies client IPs from X-Forwarded-For
+// without throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR, and enables accurate req.secure / protocol detection.
+app.set('trust proxy', ENV.TRUST_PROXY);
+
 // Security Headers
 app.use(
   helmet({
@@ -45,17 +50,17 @@ app.use(cookieParser(ENV.COOKIE_SECRET));
 app.use(attachCsrfToken);
 app.use(verifyCsrf);
 
-// Rate limiting for general API requests
-app.use('/api', apiLimiter);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
+// Health check endpoints (exempt from rate limiter for continuous cloud platform uptime monitoring)
+app.get(['/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
     app: 'DhaanTrack Harvester Management API',
     timestamp: new Date().toISOString(),
   });
 });
+
+// Rate limiting for general API requests
+app.use('/api', apiLimiter);
 
 // Main API routes
 app.use('/api', apiRouter);

@@ -20,4 +20,7 @@ export const ENV = {
   BOOTSTRAP_ADMIN_PASSWORD: process.env.BOOTSTRAP_ADMIN_PASSWORD || 'Admin@DhaanTrack2026',
   BOOTSTRAP_ADMIN_NAME: process.env.BOOTSTRAP_ADMIN_NAME || 'Super Admin',
   BOOTSTRAP_ADMIN_MOBILE: process.env.BOOTSTRAP_ADMIN_MOBILE || '9876543210',
+  TRUST_PROXY: process.env.TRUST_PROXY !== undefined
+    ? (!isNaN(Number(process.env.TRUST_PROXY)) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY)
+    : 1,
 };
