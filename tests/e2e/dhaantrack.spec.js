@@ -112,12 +112,16 @@ test.describe.serial('DhaanTrack Full-Stack End-to-End System Tests', () => {
     // Verify calculated quote preview is visible
     await expect(page.getByText('Expected Customer Amount:')).toBeVisible();
 
-    // Click "Book Field & Open Timer"
-    await page.click('button:has-text("Book Field & Open Timer")');
+    // Click "Book Field & Create Work"
+    await page.click('button:has-text("Book Field & Create Work")');
+    await expect(page.getByText('Work Booking Created Successfully!')).toBeVisible();
+
+    // Start Timer from booking confirmation
+    await page.click('button:has-text("Start Timer Now")');
     await page.waitForURL('**/app/timer');
 
-    // Start work
-    await page.click('button:has-text("Start Work")');
+    // Start work from pending bookings list
+    await page.click('button:has-text("Start")');
     await expect(page.getByText('Farmer Ramdas').first()).toBeVisible();
 
     // Verify timer is running and persists across page reload!
@@ -140,7 +144,7 @@ test.describe.serial('DhaanTrack Full-Stack End-to-End System Tests', () => {
 
     // Verify work completion banner and auto-opened payment modal
     await expect(page.getByText('Work Completed Successfully!')).toBeVisible();
-    await expect(page.getByText('Record Customer Payment')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Record Customer Payment' })).toBeVisible();
     await page.fill('input[placeholder="0.00"]', '500');
     await page.click('form button[type="submit"]:has-text("Record Payment")');
 

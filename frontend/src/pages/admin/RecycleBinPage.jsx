@@ -49,6 +49,7 @@ export const RecycleBinPage = () => {
     all: 0,
     users: 0,
     machines: 0,
+    customers: 0,
     works: 0,
     expenses: 0,
     payments: 0,
@@ -58,6 +59,7 @@ export const RecycleBinPage = () => {
     { id: 'all', label: 'All Records', count: categoryCounts.all },
     { id: 'users', label: 'Users', count: categoryCounts.users },
     { id: 'machines', label: 'Machines', count: categoryCounts.machines },
+    { id: 'customers', label: 'Customers', count: categoryCounts.customers },
     { id: 'works', label: 'Work History', count: categoryCounts.works },
     { id: 'expenses', label: 'Expenses', count: categoryCounts.expenses },
     { id: 'payments', label: 'Payments', count: categoryCounts.payments },
@@ -92,6 +94,8 @@ export const RecycleBinPage = () => {
         text: `Restored ${item.categoryLabel} record "${item.name}" successfully.`,
       });
       await mutate((k) => typeof k === 'string' && k.startsWith('/api/recycle-bin'));
+      await mutate('/api/customers');
+      await mutate((k) => typeof k === 'string' && k.startsWith('/api/customers'));
     } catch (err) {
       setFeedbackMsg({ type: 'error', text: err.message || 'Failed to restore record.' });
     } finally {
@@ -120,6 +124,8 @@ export const RecycleBinPage = () => {
         text: `Permanently removed ${selectedObjects.length} record(s). This action cannot be undone.`,
       });
       await mutate((k) => typeof k === 'string' && k.startsWith('/api/recycle-bin'));
+      await mutate('/api/customers');
+      await mutate((k) => typeof k === 'string' && k.startsWith('/api/customers'));
     } catch (err) {
       setFeedbackMsg({ type: 'error', text: err.message || 'Failed to delete selected records.' });
     } finally {
@@ -142,6 +148,8 @@ export const RecycleBinPage = () => {
         text: `Permanently deleted all soft-deleted records in category "${selectedCategory.toUpperCase()}".`,
       });
       await mutate((k) => typeof k === 'string' && k.startsWith('/api/recycle-bin'));
+      await mutate('/api/customers');
+      await mutate((k) => typeof k === 'string' && k.startsWith('/api/customers'));
     } catch (err) {
       setFeedbackMsg({ type: 'error', text: err.message || 'Failed to delete category records.' });
     } finally {

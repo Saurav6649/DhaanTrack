@@ -32,6 +32,7 @@ import { OperatorExpensesPage } from './pages/operator/OperatorExpensesPage.jsx'
 import { OperatorProfilePage } from './pages/operator/OperatorProfilePage.jsx';
 import { WorkHistoryPage } from './pages/operator/WorkHistoryPage.jsx';
 import { ExpenseHistoryPage } from './pages/operator/ExpenseHistoryPage.jsx';
+import { OperatorCustomersPage } from './pages/operator/OperatorCustomersPage.jsx';
 
 // Root Index Redirector based on authenticated role
 const RootRedirector = () => {
@@ -98,6 +99,7 @@ export const App = () => {
               <Route path="field-calculator" element={<FieldCalculatorPage />} />
               <Route path="quick-calculator" element={<QuickCalculatorPage />} />
               <Route path="today-works" element={<TodayWorksPage />} />
+              <Route path="customers" element={<OperatorCustomersPage />} />
               <Route path="payments" element={<OperatorPaymentsPage />} />
               <Route path="expenses" element={<OperatorExpensesPage />} />
               <Route path="profile" element={<OperatorProfilePage />} />

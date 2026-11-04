@@ -3,6 +3,7 @@ import { Machine } from '../models/Machine.js';
 import { WorkSession } from '../models/WorkSession.js';
 import { Expense } from '../models/Expense.js';
 import { Payment } from '../models/Payment.js';
+import { Customer } from '../models/Customer.js';
 import { logAudit } from '../utils/auditLogger.js';
 import { PAYMENT_STATUS, PAYMENT_TYPES } from '../config/constants.js';
 
@@ -26,6 +27,9 @@ const getModelForModule = (module) => {
     case 'payment':
     case 'payments':
       return { Model: Payment, key: 'payments', label: 'Payments' };
+    case 'customer':
+    case 'customers':
+      return { Model: Customer, key: 'customers', label: 'Customers' };
     default:
       throw new Error(`Unsupported category/module: ${module}`);
   }
@@ -37,7 +41,7 @@ export const getDeletedRecords = async ({ category = 'all', search = '' }) => {
   // Queries for soft-deleted documents
   const deletedQuery = { isDeleted: true };
 
-  const [users, machines, works, expenses, payments] = await Promise.all([
+  const [users, machines, works, expenses, payments, customers] = await Promise.all([
     normCategory === 'all' || normCategory === 'users' || normCategory === 'user'
       ? User.find(deletedQuery).sort({ deletedAt: -1 })
       : [],
@@ -52,6 +56,9 @@ export const getDeletedRecords = async ({ category = 'all', search = '' }) => {
       : [],
     normCategory === 'all' || normCategory === 'payments' || normCategory === 'payment'
       ? Payment.find(deletedQuery).populate('workSessionId', 'customerName').sort({ deletedAt: -1 })
+      : [],
+    normCategory === 'all' || normCategory === 'customers' || normCategory === 'customer'
+      ? Customer.find(deletedQuery).populate('createdBy', 'name userId').sort({ deletedAt: -1 })
       : [],
   ]);
 
@@ -144,22 +151,42 @@ export const getDeletedRecords = async ({ category = 'all', search = '' }) => {
     });
   });
 
+  customers.forEach((c) => {
+    const creator = c.createdBy?.name ? `Created by: ${c.createdBy.name}` : '';
+    items.push({
+      _id: String(c._id),
+      module: 'customer',
+      category: 'customers',
+      categoryLabel: 'Customers',
+      name: c.customerName,
+      identifier: c.mobileNumber,
+      details: `Area: ${c.localArea} • ${creator} • Remark: ${c.remark || 'None'}`,
+      deletedAt: c.deletedAt || c.updatedAt,
+      deletedBy: c.deletedBy,
+      deletedByName: 'Admin',
+      deletedByRole: 'ADMIN',
+      meta: { customerName: c.customerName, mobileNumber: c.mobileNumber, localArea: c.localArea },
+    });
+  });
+
   // Calculate live category counts across all modules
-  const [totalUsers, totalMachines, totalWorks, totalExpenses, totalPayments] = await Promise.all([
+  const [totalUsers, totalMachines, totalWorks, totalExpenses, totalPayments, totalCustomers] = await Promise.all([
     User.countDocuments(deletedQuery),
     Machine.countDocuments(deletedQuery),
     WorkSession.countDocuments(deletedQuery),
     Expense.countDocuments(deletedQuery),
     Payment.countDocuments(deletedQuery),
+    Customer.countDocuments(deletedQuery),
   ]);
 
   const categoryCounts = {
-    all: totalUsers + totalMachines + totalWorks + totalExpenses + totalPayments,
+    all: totalUsers + totalMachines + totalWorks + totalExpenses + totalPayments + totalCustomers,
     users: totalUsers,
     machines: totalMachines,
     works: totalWorks,
     expenses: totalExpenses,
     payments: totalPayments,
+    customers: totalCustomers,
   };
 
   // Sort descending by deletedAt

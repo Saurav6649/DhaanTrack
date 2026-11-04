@@ -2,7 +2,7 @@ import rateLimit from 'express-rate-limit';
 
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // max 200 login attempts per window (sufficient for test suites)
+  max: process.env.NODE_ENV === 'test' ? 2000 : 500, // accommodate test suites
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -13,7 +13,7 @@ export const loginLimiter = rateLimit({
 
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500, // 500 requests per 15 minutes per IP
+  max: process.env.NODE_ENV === 'test' ? 10000 : 3000, // accommodate comprehensive full-suite e2e runs
   standardHeaders: true,
   legacyHeaders: false,
   message: {

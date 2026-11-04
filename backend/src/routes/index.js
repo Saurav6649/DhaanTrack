@@ -9,6 +9,8 @@ import paymentRoutes from './paymentRoutes.js';
 import reportRoutes from './reportRoutes.js';
 import masterDataRoutes from './masterDataRoutes.js';
 import recycleBinRoutes from './recycleBinRoutes.js';
+import customerRoutes from './customerRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
 
 const apiRouter = Router();
 
@@ -22,5 +24,7 @@ apiRouter.use('/payments', paymentRoutes);
 apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/master-data', masterDataRoutes);
 apiRouter.use('/recycle-bin', recycleBinRoutes);
+apiRouter.use('/customers', customerRoutes);
+apiRouter.use('/notifications', notificationRoutes);
 
 export default apiRouter;

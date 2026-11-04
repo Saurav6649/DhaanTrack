@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useSWR, { mutate } from 'swr';
 import { api } from '../../api/client.js';
 import { Card } from '../../components/common/Card.jsx';
@@ -11,6 +11,8 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner.jsx';
 import { UserMachineModal } from '../../components/admin/UserMachineModal.jsx';
 import { MachineModal } from '../../components/admin/MachineModal.jsx';
 import { ResetPasswordModal } from '../../components/admin/ResetPasswordModal.jsx';
+import { CustomerModal } from '../../components/common/CustomerModal.jsx';
+import { ShareCustomerModal } from '../../components/common/ShareCustomerModal.jsx';
 import {
   Users,
   Tractor,
@@ -26,13 +28,24 @@ import {
   IndianRupee,
   Layers,
   Sparkles,
+  Phone,
+  MapPin,
+  Share2,
+  Copy,
+  Check,
+  Search,
+  User,
+  ArrowUpDown,
+  Filter,
+  Award,
 } from 'lucide-react';
 
 export const UsersMachinesPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // Active view tab: 'users' (Operators & Metrics) | 'machines' (Harvester Machines CRUD)
-  const [activeTab, setActiveTab] = useState('users');
+  // Active view tab: 'users' (Operators & Metrics) | 'machines' (Harvester Machines CRUD) | 'customers'
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'users');
 
   // SWR data
   const { data: usersData, isLoading: usersLoading } = useSWR('/api/users/combined');
@@ -41,16 +54,80 @@ export const UsersMachinesPage = () => {
   const { data: machinesData, isLoading: machinesLoading } = useSWR('/api/machines');
   const machines = machinesData?.machines || [];
 
+  // Customer filter & sorting states
+  const [customerSearch, setCustomerSearch] = useState(searchParams.get('search') || '');
+  const [priorityFilter, setPriorityFilter] = useState('all'); // 'all' | 'HIGH' | 'MEDIUM' | 'LOW'
+  const [customerSortBy, setCustomerSortBy] = useState('acreage_desc'); // 'acreage_desc' | 'priority_desc' | 'recently_added'
+
+  const customerQueryParams = new URLSearchParams({
+    sortBy: customerSortBy,
+    ...(priorityFilter !== 'all' && { priority: priorityFilter }),
+    ...(customerSearch.trim() && { search: customerSearch.trim() }),
+  }).toString();
+
+  const { data: customersData, isLoading: customersLoading, mutate: mutateCustomers } = useSWR(`/api/customers?${customerQueryParams}`);
+  const customers = customersData?.customers || customersData?.data?.customers || (Array.isArray(customersData) ? customersData : []);
+
   // Modals state
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [machineModalOpen, setMachineModalOpen] = useState(false);
+  const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
   const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
   const [selectedUserForReset, setSelectedUserForReset] = useState(null);
   const [selectedMachineForEdit, setSelectedMachineForEdit] = useState(null);
+  const [selectedCustomerForEdit, setSelectedCustomerForEdit] = useState(null);
+  const [selectedCustomerForShare, setSelectedCustomerForShare] = useState(null);
   const [viewMachineDetails, setViewMachineDetails] = useState(null);
+
+  // Customer copy feedback
+  const [copiedId, setCopiedId] = useState(null);
 
   // Alerts
   const [feedback, setFeedback] = useState({ type: '', text: '' });
+
+  const handleCopyMobile = async (mobile, id) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(mobile);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = mobile;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Delete customer (move to Recycle Bin - Admin Only)
+  const handleDeleteCustomer = async (cust) => {
+    const confirm = window.confirm(
+      `Move customer "${cust.customerName}" (${cust.mobileNumber}) to Recycle Bin? You can restore it anytime.`
+    );
+    if (!confirm) return;
+
+    try {
+      await api.delete(`/api/customers/${cust._id}`);
+      await mutateCustomers();
+      await mutate('/api/customers');
+      await mutate((k) => typeof k === 'string' && k.startsWith('/api/customers'));
+      await mutate('/api/recycle-bin');
+      await mutate((k) => typeof k === 'string' && k.startsWith('/api/recycle-bin'));
+      setFeedback({
+        type: 'success',
+        text: `Customer "${cust.customerName}" moved to Recycle Bin successfully.`,
+      });
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message || 'Failed to delete customer.' });
+    }
+  };
 
   // Toggle user status
   const handleToggleStatus = async (user) => {
@@ -110,6 +187,17 @@ export const UsersMachinesPage = () => {
     }
   };
 
+  const filteredCustomers = customers.filter((c) => {
+    if (!customerSearch.trim()) return true;
+    const q = customerSearch.toLowerCase();
+    return (
+      (c.customerName || '').toLowerCase().includes(q) ||
+      (c.mobileNumber || '').includes(q) ||
+      (c.localArea || '').toLowerCase().includes(q) ||
+      (c.remark || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -121,7 +209,17 @@ export const UsersMachinesPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedCustomerForEdit(null);
+              setCustomerModalOpen(true);
+            }}
+            className="flex-1 sm:flex-none font-bold text-emerald-700 border-emerald-600 hover:bg-emerald-50"
+          >
+            <User className="w-4 h-4 mr-1.5 text-emerald-600" /> Add Customer
+          </Button>
           <Button
             variant="secondary"
             onClick={() => {
@@ -154,7 +252,7 @@ export const UsersMachinesPage = () => {
       )}
 
       {/* Segmented View Tabs */}
-      <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit">
+      <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit flex-wrap">
         <button
           type="button"
           onClick={() => setActiveTab('users')}
@@ -179,6 +277,19 @@ export const UsersMachinesPage = () => {
         >
           <Tractor className="w-4 h-4 text-brand-600" />
           <span>Harvester Machines ({machines.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('customers')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all min-h-[40px] ${
+            activeTab === 'customers'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          <User className="w-4 h-4 text-emerald-600" />
+          <span>Customers & Leads ({customers.length})</span>
         </button>
       </div>
 
@@ -626,6 +737,476 @@ export const UsersMachinesPage = () => {
         </Card>
       )}
 
+      {/* TAB 3: CUSTOMERS & LEADS */}
+      {activeTab === 'customers' && (
+        <div className="space-y-4">
+          {/* Controls: Search, Priority Filter, Sorting, Add Button */}
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-100 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  placeholder="Search customers by name, phone, village, or remark..."
+                  className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                />
+                {customerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCustomerSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Sorting Dropdown & Add Customer */}
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-xl text-xs">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span className="text-gray-500 font-semibold hidden sm:inline">Sort:</span>
+                  <select
+                    value={customerSortBy}
+                    onChange={(e) => setCustomerSortBy(e.target.value)}
+                    className="bg-transparent font-bold text-gray-800 focus:outline-none cursor-pointer"
+                  >
+                    <option value="acreage_desc">Highest Acreage First</option>
+                    <option value="priority_desc">Highest Priority First</option>
+                    <option value="recently_added">Recently Added</option>
+                  </select>
+                </div>
+
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setSelectedCustomerForEdit(null);
+                    setCustomerModalOpen(true);
+                  }}
+                  className="font-bold whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white min-h-[40px]"
+                >
+                  <Plus className="w-4 h-4 mr-1.5" /> Add Customer
+                </Button>
+              </div>
+            </div>
+
+            {/* Priority Filter Pills */}
+            <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100 overflow-x-auto text-xs">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1 flex items-center gap-1">
+                <Filter className="w-3 h-3" /> Priority:
+              </span>
+              <button
+                type="button"
+                onClick={() => setPriorityFilter('all')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  priorityFilter === 'all'
+                    ? 'bg-gray-900 text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                All Priorities
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriorityFilter('HIGH')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  priorityFilter === 'HIGH'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                }`}
+              >
+                High (≥ 5 Acre)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriorityFilter('MEDIUM')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  priorityFilter === 'MEDIUM'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                }`}
+              >
+                Medium (2-5 Acre)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPriorityFilter('LOW')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  priorityFilter === 'LOW'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                }`}
+              >
+                Low (&lt; 2 Acre)
+              </button>
+            </div>
+          </div>
+
+          <Card className="p-0 overflow-hidden">
+            {customersLoading ? (
+              <LoadingSpinner label="Fetching central customer database and ranking..." />
+            ) : customers.length === 0 ? (
+              <div className="py-16 text-center text-gray-400">
+                <User className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="font-bold text-gray-800 text-base">
+                  {customerSearch ? 'No Customers Match Your Search' : 'No Customer Records Found'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1 mb-4">
+                  {customerSearch
+                    ? 'Try searching with a different name or number.'
+                    : 'Add a new customer to keep contacts organized and shared with operators.'}
+                </p>
+                {!customerSearch && (
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setSelectedCustomerForEdit(null);
+                      setCustomerModalOpen(true);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Plus className="w-4 h-4 mr-1.5" /> Add First Customer
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Mobile View: Stacked Cards */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {customers.map((c, idx) => {
+                    const isCopied = copiedId === c._id;
+                    const sharedCount = (c.sharedWith || []).length;
+                    const rankNum = c.rank || idx + 1;
+                    const priorityBadge =
+                      c.priority === 'HIGH'
+                        ? 'bg-rose-100 text-rose-800 border-rose-200'
+                        : c.priority === 'MEDIUM'
+                        ? 'bg-amber-100 text-amber-800 border-amber-200'
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+
+                    return (
+                      <div key={c._id} className="p-4 space-y-3 hover:bg-gray-50/50 transition">
+                        {/* Top: Rank, Name, Priority */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2">
+                            <span className="w-7 h-7 rounded-xl bg-gray-900 text-white font-mono font-black text-xs flex items-center justify-center shrink-0">
+                              #{rankNum}
+                            </span>
+                            <div>
+                              <h4 className="font-bold text-gray-900 text-base flex items-center gap-1.5">
+                                {c.customerName}
+                              </h4>
+                              <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                {c.localArea}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${priorityBadge}`}>
+                              {c.priority || 'LOW'}
+                            </span>
+                            <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              {c.landAreaAcres || 1.0} Acre
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Mobile Number Row */}
+                        <div className="flex items-center justify-between text-xs bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                          <span className="text-gray-500 font-mono font-bold text-sm">{c.mobileNumber}</span>
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={`tel:${c.mobileNumber}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              <Phone className="w-3 h-3" /> Call
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyMobile(c.mobileNumber, c._id)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-gray-700 bg-white border border-gray-200"
+                            >
+                              {isCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                              <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {c.remark && (
+                          <p className="text-xs text-gray-600 italic bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                            "{c.remark}"
+                          </p>
+                        )}
+
+                        {/* Shared With & Created By info */}
+                        <div className="text-xs space-y-1.5 bg-gray-50/80 p-2.5 rounded-xl border border-gray-100">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-gray-400">Added By:</span>
+                            <span className="font-semibold text-gray-700">
+                              {c.createdBy?.name || 'Admin'}
+                            </span>
+                          </div>
+                          <div className="flex items-start justify-between text-[11px] gap-2">
+                            <span className="text-gray-400 shrink-0">Shared With:</span>
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {sharedCount === 0 ? (
+                                <span className="text-gray-400 italic">None</span>
+                              ) : (
+                                (c.sharedWith || []).map((u) => (
+                                  <span
+                                    key={u._id || u}
+                                    className="px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 font-semibold text-[10px]"
+                                  >
+                                    {u.name || u.userId || 'Operator'}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons Footer */}
+                        <div className="flex items-center justify-end pt-2 border-t border-gray-100 gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerForShare(c);
+                              setShareModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100"
+                          >
+                            <Share2 className="w-3.5 h-3.5" /> Share
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerForEdit(c);
+                              setCustomerModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomer(c)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-gray-50/80 border-b border-gray-100 text-gray-500 font-semibold uppercase tracking-wider text-[11px]">
+                        <th className="py-3 px-3 text-center w-14">Rank</th>
+                        <th className="py-3 px-4">Customer Name</th>
+                        <th className="py-3 px-4">Mobile Number</th>
+                        <th className="py-3 px-4">Local Area</th>
+                        <th className="py-3 px-4 text-center">Khet Area (Acre)</th>
+                        <th className="py-3 px-4 text-center">Priority</th>
+                        <th className="py-3 px-4">Remark</th>
+                        <th className="py-3 px-4">Created By</th>
+                        <th className="py-3 px-4">Shared With</th>
+                        <th className="py-3 px-4">Created Date</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {customers.map((c, idx) => {
+                        const isCopied = copiedId === c._id;
+                        const rankNum = c.rank || idx + 1;
+                        const priorityBadge =
+                          c.priority === 'HIGH'
+                            ? 'bg-rose-100 text-rose-800 border-rose-200'
+                            : c.priority === 'MEDIUM'
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+
+                        return (
+                          <tr key={c._id} className="hover:bg-gray-50/60 transition">
+                            {/* Rank */}
+                            <td className="py-3 px-3 text-center">
+                              <span
+                                className={`inline-flex items-center justify-center font-mono font-black text-xs w-7 h-7 rounded-xl ${
+                                  rankNum === 1
+                                    ? 'bg-amber-500 text-white shadow-xs'
+                                    : rankNum === 2
+                                    ? 'bg-gray-400 text-white'
+                                    : rankNum === 3
+                                    ? 'bg-amber-700 text-white'
+                                    : 'bg-gray-100 text-gray-700'
+                                }`}
+                              >
+                                #{rankNum}
+                              </span>
+                            </td>
+
+                            {/* Customer Name */}
+                            <td className="py-3 px-4 font-bold text-gray-900 text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs shrink-0">
+                                  {c.customerName?.charAt(0)?.toUpperCase()}
+                                </div>
+                                <span>{c.customerName}</span>
+                              </div>
+                            </td>
+
+                            {/* Mobile Number */}
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-bold text-gray-800 text-sm">
+                                  {c.mobileNumber}
+                                </span>
+                                <a
+                                  href={`tel:${c.mobileNumber}`}
+                                  title="Call directly"
+                                  className="p-1 rounded-md text-emerald-600 hover:bg-emerald-50 transition"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyMobile(c.mobileNumber, c._id)}
+                                  title="Copy phone number"
+                                  className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+                                >
+                                  {isCopied ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+
+                            {/* Local Area */}
+                            <td className="py-3 px-4 text-gray-700">
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                <span>{c.localArea}</span>
+                              </div>
+                            </td>
+
+                            {/* Khet Area (Acre) */}
+                            <td className="py-3 px-4 text-center">
+                              <span className="font-mono font-black text-gray-900 text-sm bg-gray-100 px-2.5 py-1 rounded-xl">
+                                {c.landAreaAcres || 1.0} Acre
+                              </span>
+                            </td>
+
+                            {/* Priority */}
+                            <td className="py-3 px-4 text-center">
+                              <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${priorityBadge}`}>
+                                {c.priority || 'LOW'}
+                              </span>
+                            </td>
+
+                            {/* Remark */}
+                            <td className="py-3 px-4 text-gray-500 max-w-xs truncate">
+                              {c.remark ? (
+                                <span title={c.remark}>"{c.remark}"</span>
+                              ) : (
+                                <span className="text-gray-300 italic">—</span>
+                              )}
+                            </td>
+
+                            {/* Created By */}
+                            <td className="py-3 px-4 text-gray-600">
+                              <div>
+                                <span className="font-semibold text-gray-800 block">
+                                  {c.createdBy?.name || 'Admin'}
+                                </span>
+                                <span className="text-[10px] text-gray-400 font-mono">
+                                  @{c.createdBy?.userId || 'admin'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Shared With */}
+                            <td className="py-3 px-4">
+                              <div className="flex flex-wrap gap-1 max-w-xs">
+                                {(c.sharedWith || []).length === 0 ? (
+                                  <span className="text-gray-400 italic text-[11px]">Not shared</span>
+                                ) : (
+                                  (c.sharedWith || []).map((u) => (
+                                    <span
+                                      key={u._id || u}
+                                      className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-100"
+                                    >
+                                      {u.name || u.userId || 'Operator'}
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Created Date */}
+                            <td className="py-3 px-4 text-gray-500 whitespace-nowrap">
+                              {new Date(c.createdAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCustomerForShare(c);
+                                    setShareModalOpen(true);
+                                  }}
+                                  title="Share with operators"
+                                  className="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition"
+                                >
+                                  <Share2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCustomerForEdit(c);
+                                    setCustomerModalOpen(true);
+                                  }}
+                                  title="Edit customer"
+                                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCustomer(c)}
+                                  title="Move to Recycle Bin (Admin only)"
+                                  className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      )}
+
       {/* Machine Details Modal */}
       {viewMachineDetails && (
         <Modal
@@ -716,6 +1297,24 @@ export const UsersMachinesPage = () => {
         isOpen={!!selectedUserForReset}
         user={selectedUserForReset}
         onClose={() => setSelectedUserForReset(null)}
+      />
+      <CustomerModal
+        isOpen={customerModalOpen}
+        customer={selectedCustomerForEdit}
+        onClose={() => {
+          setCustomerModalOpen(false);
+          setSelectedCustomerForEdit(null);
+        }}
+        onSuccess={(msg) => setFeedback({ type: 'success', text: msg })}
+      />
+      <ShareCustomerModal
+        isOpen={shareModalOpen}
+        customer={selectedCustomerForShare}
+        onClose={() => {
+          setShareModalOpen(false);
+          setSelectedCustomerForShare(null);
+        }}
+        onSuccess={(msg) => setFeedback({ type: 'success', text: msg })}
       />
     </div>
   );

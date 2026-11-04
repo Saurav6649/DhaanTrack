@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import useSWR from 'swr';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { NotificationDrawer } from '../common/NotificationDrawer.jsx';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -15,16 +17,27 @@ import {
   ChevronRight,
   ShieldCheck,
   Trash2,
+  Bell,
 } from 'lucide-react';
 
 export const AdminLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+
+  // Notifications fetch for unread badge
+  const { data: notifData } = useSWR('/api/notifications', { refreshInterval: 15000 });
+  const unreadCount = notifData?.unreadCount ?? notifData?.data?.unreadCount ?? 0;
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleSelectCustomer = (cust) => {
+    const q = cust?.mobileNumber || cust?.customerName || '';
+    navigate(`/admin/users-machines?tab=customers&search=${encodeURIComponent(q)}`);
   };
 
   const navItems = [
@@ -47,13 +60,29 @@ export const AdminLayout = () => {
           <span className="font-bold text-gray-900 tracking-tight">DhaanTrack</span>
           <span className="text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.5 rounded">ADMIN</span>
         </div>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          aria-label="Toggle navigation drawer"
-          className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition focus:outline-none"
-        >
-          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setNotifOpen(true)}
+            aria-label="View notifications"
+            className="relative p-2 text-gray-600 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-2 w-4 h-4 bg-rose-500 text-white rounded-full text-[10px] font-black flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle navigation drawer"
+            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition focus:outline-none"
+          >
+            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Sidebar Overlay on mobile */}
@@ -138,11 +167,39 @@ export const AdminLayout = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 min-w-0 overflow-y-auto flex flex-col">
+        {/* Desktop Top Header Bar with Notifications */}
+        <div className="hidden md:flex items-center justify-between px-6 lg:px-8 py-3 bg-white border-b border-gray-100 sticky top-0 z-30">
+          <div className="text-xs font-semibold text-gray-500">
+            Welcome back, <span className="text-gray-900 font-bold">{user?.name}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setNotifOpen(true)}
+            aria-label="View notifications"
+            className="relative p-2 text-gray-600 rounded-xl hover:bg-gray-100 hover:text-gray-900 transition flex items-center justify-center min-h-[40px] min-w-[40px]"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white rounded-full text-[10px] font-black flex items-center justify-center animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full flex-1">
           <Outlet />
         </div>
       </main>
+
+      {/* Notifications Drawer */}
+      <NotificationDrawer
+        isOpen={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        onSelectCustomer={handleSelectCustomer}
+      />
     </div>
   );
 };

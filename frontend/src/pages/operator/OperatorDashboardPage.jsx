@@ -21,6 +21,7 @@ import {
   MapPin,
   ChevronRight,
   Sparkles,
+  Users,
 } from 'lucide-react';
 
 export const OperatorDashboardPage = () => {
@@ -154,6 +155,17 @@ export const OperatorDashboardPage = () => {
             </div>
             <span className="font-bold text-sm text-gray-900">Record Payment</span>
             <span className="text-[11px] text-gray-400 mt-0.5">Advance & settlement</span>
+          </Link>
+
+          <Link
+            to="/app/customers"
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-emerald-300 hover:shadow-md transition text-center group col-span-2 sm:col-span-1"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-105 transition">
+              <Users className="w-6 h-6" />
+            </div>
+            <span className="font-bold text-sm text-gray-900">Customers & Leads</span>
+            <span className="text-[11px] text-gray-400 mt-0.5">Directory & user sharing</span>
           </Link>
         </div>
       </div>

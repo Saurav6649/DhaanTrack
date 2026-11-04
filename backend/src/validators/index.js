@@ -145,3 +145,26 @@ export const masterDataSchema = z.object({
   value: z.any(),
   description: z.string().optional(),
 });
+
+// Customer Management & Sharing Schemas
+export const createCustomerSchema = z.object({
+  customerName: z.string().trim().min(1, 'Customer name is required').max(120),
+  mobileNumber: z.string().trim().regex(/^\d{10}$/, 'Mobile number must be a valid 10-digit number'),
+  localArea: z.string().trim().min(1, 'Local area or village is required').max(200),
+  landAreaAcres: z.coerce.number().min(0.1, 'Khet ka Area (Acre) must be at least 0.1 Acre'),
+  remark: z.string().trim().max(500).optional().default(''),
+  shareWithUsers: z.array(z.string()).optional().default([]),
+});
+
+export const updateCustomerSchema = z.object({
+  customerName: z.string().trim().min(1, 'Customer name cannot be empty').max(120).optional(),
+  mobileNumber: z.string().trim().regex(/^\d{10}$/, 'Mobile number must be 10 digits').optional(),
+  localArea: z.string().trim().min(1, 'Local area cannot be empty').max(200).optional(),
+  landAreaAcres: z.coerce.number().min(0.1, 'Khet ka Area (Acre) must be at least 0.1 Acre').optional(),
+  remark: z.string().trim().max(500).optional(),
+  shareWithUsers: z.array(z.string()).optional(),
+});
+
+export const shareCustomerSchema = z.object({
+  userIds: z.array(z.string()).min(1, 'At least one user must be selected to share'),
+});

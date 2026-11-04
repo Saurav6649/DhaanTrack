@@ -91,6 +91,7 @@ export const UserMachineModal = ({ isOpen, onClose, user = null }) => {
 
       await mutate('/api/users/combined');
       await mutate('/api/machines');
+      await mutate('/api/customers/shareable-users');
       onClose();
     } catch (err) {
       setServerError(err.message || 'Operation failed.');
