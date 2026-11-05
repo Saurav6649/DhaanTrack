@@ -184,16 +184,39 @@ export const OperatorLayout = () => {
         onSelectCustomer={handleSelectCustomer}
       />
 
-      {/* Floating Quick Action Button: + New Work FAB */}
-      {location.pathname !== '/app/field-calculator' && (
-        <Link
-          to="/app/field-calculator"
-          aria-label="Create new harvesting work"
-          className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-30 inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-black px-4 py-3 rounded-full shadow-lg shadow-brand-600/35 transition-all text-xs sm:text-sm min-h-[46px] select-none"
-        >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-          <span>+ New Work</span>
-        </Link>
+      {/* Dashboard-Only Floating Quick Action Button: + New Work FAB */}
+      {location.pathname === '/app/dashboard' && (
+        <div className="fixed bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+          <div className="fab-float-anim relative pointer-events-auto">
+            {/* Pulsing Neon Green Outer Ring */}
+            <span
+              className="absolute -inset-1 rounded-full border-2 border-emerald-400 fab-ring-anim pointer-events-none"
+              aria-hidden="true"
+            />
+
+            {/* Glowing Action Button with Surface Shine */}
+            <Link
+              to="/app/field-calculator"
+              aria-label="Create new harvesting work"
+              className="group relative inline-flex items-center gap-2.5 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-500 hover:to-green-600 text-white font-black px-6 py-3.5 rounded-full fab-glow-anim transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-[0_0_35px_rgba(34,197,94,0.85)] min-h-[48px] overflow-hidden whitespace-nowrap shadow-xl"
+            >
+              {/* Animated Light Sheen Sweep Overlay */}
+              <span
+                className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/35 to-transparent fab-shine-anim pointer-events-none"
+                aria-hidden="true"
+              />
+
+              {/* Animated Plus Icon */}
+              <span className="fab-icon-anim flex items-center justify-center">
+                <Plus className="w-5 h-5 shrink-0 stroke-[2.75]" />
+              </span>
+
+              <span className="text-sm tracking-wide font-black uppercase drop-shadow-xs">
+                + New Work
+              </span>
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );

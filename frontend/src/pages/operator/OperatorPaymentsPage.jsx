@@ -9,13 +9,12 @@ import { BackButton } from '../../components/common/BackButton.jsx';
 import { CreditCard, IndianRupee, CheckCircle, Phone, MapPin, ChevronRight, AlertCircle } from 'lucide-react';
 
 export const OperatorPaymentsPage = () => {
-  const { data, isLoading } = useSWR('/api/work-sessions');
-  const sessions = data?.workSessions || [];
+  // Customer Payment Receipts must display ONLY work records whose actual work status is COMPLETED
+  const { data, isLoading } = useSWR('/api/work-sessions?status=COMPLETED');
+  const rawSessions = data?.workSessions || [];
+  const sessions = rawSessions.filter((s) => s.status === 'COMPLETED');
 
   const [selectedSession, setSelectedSession] = useState(null);
-
-  // Filter for sessions with payments or due balance
-  const activeAndCompleted = sessions.filter((s) => s.status !== 'PENDING' || s.advanceAmount > 0);
 
   return (
     <div className="space-y-5 pb-8">
@@ -35,8 +34,10 @@ export const OperatorPaymentsPage = () => {
       ) : sessions.length === 0 ? (
         <Card className="text-center py-12">
           <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-          <h3 className="text-base font-bold text-gray-800">No Work Sessions Found</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Book or start a work session to collect payments.</p>
+          <h3 className="text-base font-bold text-gray-800">No Completed Work Sessions Found</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1">
+            Customer Payment Receipts only displays completed work records. When a field harvesting session is finished, it will appear here for receipt generation and balance settlement.
+          </p>
         </Card>
       ) : (
         <div className="space-y-3">

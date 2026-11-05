@@ -46,14 +46,28 @@ export const OperatorDashboardPage = () => {
   const pendingSessions = sessions.filter((s) => s.status === 'PENDING');
   const completedSessions = sessions.filter((s) => s.status === 'COMPLETED');
 
+  // Filter Today's Works to ONLY active works (Pending, Running / In-Progress). Completed works are excluded.
+  const activeWorks = sessions.filter((work) => {
+    const st = work.status?.toUpperCase();
+    return st === 'PENDING' || st === 'IN_PROGRESS' || st === 'PAUSED';
+  });
+
   const formatHours = (seconds = 0) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return `${h}h ${m}m`;
   };
 
+  const handleOpenWorkDetails = (session, e) => {
+    // If clicked on an interactive nested button or link other than the navigation arrow, stop card navigation
+    if (e?.target?.closest('button:not([data-nav-arrow]), a:not([data-nav-arrow]), input, select')) {
+      return;
+    }
+    navigate('/app/timer');
+  };
+
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-5 pb-28 sm:pb-32">
       {/* 1. Assigned Machine Header Card */}
       <div className="bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-3xl p-5 shadow-lg shadow-brand-600/20">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
@@ -170,11 +184,11 @@ export const OperatorDashboardPage = () => {
         </div>
       </div>
 
-      {/* 4. Today's Work Summary Overview */}
+      {/* 4. Today's Work Summary Overview (ONLY Pending & Running / In-Progress works) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
-            Today's Works ({sessions.length})
+            Today's Works ({activeWorks.length})
           </h3>
           <Link to="/app/today-works" className="text-xs font-bold text-brand-600 hover:underline">
             View All Cards
@@ -182,28 +196,47 @@ export const OperatorDashboardPage = () => {
         </div>
 
         {worksLoading ? (
-          <LoadingSpinner label="Loading today's jobs..." />
-        ) : sessions.length === 0 ? (
+          <LoadingSpinner label="Loading today's active jobs..." />
+        ) : activeWorks.length === 0 ? (
           <Card className="text-center py-8">
-            <CalendarCheck className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm font-bold text-gray-800">No Harvesting Jobs Scheduled Today</p>
-            <p className="text-xs text-gray-500 mt-0.5 mb-4">Use the Field Calculator to book farmer lands</p>
+            <CalendarCheck className="w-10 h-10 text-brand-500 mx-auto mb-2" />
+            <p className="text-sm font-bold text-gray-800">No Active Works Today</p>
+            <p className="text-xs text-gray-500 mt-0.5 mb-4">
+              All completed jobs are safely preserved in View All Cards. Use the Field Calculator to book new works.
+            </p>
             <Button size="sm" variant="primary" onClick={() => navigate('/app/field-calculator')}>
-              <Plus className="w-4 h-4 mr-1" /> New Booking
+              <Plus className="w-4 h-4 mr-1" /> New Work
             </Button>
           </Card>
         ) : (
           <div className="space-y-2.5">
-            {sessions.map((s) => (
-              <Card key={s._id} className="p-3.5 hover:shadow-md transition">
+            {activeWorks.map((s) => (
+              <div
+                key={s._id}
+                role="button"
+                tabIndex={0}
+                aria-label={`View work details for ${s.customerName}`}
+                onClick={(e) => handleOpenWorkDetails(s, e)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenWorkDetails(s, e);
+                  }
+                }}
+                className="group relative bg-white rounded-2xl border border-gray-100 p-4 shadow-xs hover:border-brand-400 hover:shadow-md hover:bg-emerald-50/10 active:scale-[0.99] transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 select-none"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h4 className="font-bold text-sm text-gray-900">{s.customerName}</h4>
+                    <h4 className="font-bold text-sm text-gray-900 group-hover:text-brand-800 transition-colors">
+                      {s.customerName}
+                    </h4>
                     <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-gray-400" /> {s.fieldLocation}
+                      <MapPin className="w-3 h-3 text-gray-400 shrink-0" /> {s.fieldLocation}
                     </p>
                   </div>
-                  <Badge status={s.status} />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Badge status={s.status} />
+                  </div>
                 </div>
 
                 <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs">
@@ -211,18 +244,21 @@ export const OperatorDashboardPage = () => {
                     Duration: <strong className="text-gray-900">{formatHours(s.totalWorkedSeconds)}</strong>
                   </span>
                   <div className="flex items-center gap-2">
-                    <Badge status={s.paymentStatus} />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigate('/app/timer')}
-                      className="px-2 py-1 text-brand-700"
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Badge status={s.paymentStatus} />
+                    </div>
+                    {/* Visual Navigation Arrow Indicator */}
+                    <span
+                      data-nav-arrow="true"
+                      className="p-1.5 rounded-lg text-brand-700 bg-brand-50 group-hover:bg-brand-600 group-hover:text-white transition-all duration-150 inline-flex items-center justify-center"
+                      title="View Details"
+                      aria-hidden="true"
                     >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
+                      <ChevronRight className="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform" />
+                    </span>
                   </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         )}

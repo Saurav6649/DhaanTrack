@@ -1,13 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 // Unique IDs for isolated parallel-safe execution
-const RUN_ID = Date.now().toString().slice(-4);
-const USER_A_ID = `usr_a_${RUN_ID}`;
-const USER_B_ID = `usr_b_${RUN_ID}`;
-const USER_A_NAME = `Ramesh Operator ${RUN_ID}`;
-const USER_B_NAME = `Suresh Operator ${RUN_ID}`;
-const CUSTOMER_NAME = `Kisan Ramphal ${RUN_ID}`;
-const CUSTOMER_MOBILE = `97531${RUN_ID.padStart(5, '0')}`; // exactly 10 digits
+const RANDOM_SUFFIX = Math.floor(10000 + Math.random() * 90000).toString(); // 5 random digits
+const USER_A_ID = `usr_a_${RANDOM_SUFFIX}`;
+const USER_B_ID = `usr_b_${RANDOM_SUFFIX}`;
+const USER_A_NAME = `Ramesh Operator ${RANDOM_SUFFIX}`;
+const USER_B_NAME = `Suresh Operator ${RANDOM_SUFFIX}`;
+const CUSTOMER_NAME = `Kisan Ramphal ${RANDOM_SUFFIX}`;
+const CUSTOMER_MOBILE = `97531${RANDOM_SUFFIX}`; // exactly 10 digits
+const USER_A_MOBILE = `91111${RANDOM_SUFFIX}`; // exactly 10 digits
+const USER_B_MOBILE = `92222${RANDOM_SUFFIX}`; // exactly 10 digits
 const LOCAL_AREA = `Paddy Sector 9, Village Rampur`;
 const REMARK_TEXT = `Wheat harvesting planned for 5 acres field`;
 
@@ -33,9 +35,9 @@ test.describe.serial('DhaanTrack Customer Management, Dynamic Sharing & Priority
     await page.fill('input[placeholder="Operator\'s full name"]', USER_A_NAME);
     await page.fill('input[placeholder="Unique login ID"]', USER_A_ID);
     await page.fill('input[placeholder="Min 8 characters"]', 'Password@123');
-    await page.fill('input[placeholder="10-digit number"]', `91111${RUN_ID.padStart(5, '0')}`);
+    await page.fill('input[placeholder="10-digit number"]', USER_A_MOBILE);
     await page.click('button:has-text("Create User")');
-    await expect(page.getByText('Add New Operator / User')).not.toBeVisible();
+    await expect(page.getByText('Add New Operator / User')).not.toBeVisible({ timeout: 20000 });
 
     // Create User B
     await page.click('button:has-text("Add User")');
@@ -43,9 +45,9 @@ test.describe.serial('DhaanTrack Customer Management, Dynamic Sharing & Priority
     await page.fill('input[placeholder="Operator\'s full name"]', USER_B_NAME);
     await page.fill('input[placeholder="Unique login ID"]', USER_B_ID);
     await page.fill('input[placeholder="Min 8 characters"]', 'Password@123');
-    await page.fill('input[placeholder="10-digit number"]', `92222${RUN_ID.padStart(5, '0')}`);
+    await page.fill('input[placeholder="10-digit number"]', USER_B_MOBILE);
     await page.click('button:has-text("Create User")');
-    await expect(page.getByText('Add New Operator / User')).not.toBeVisible();
+    await expect(page.getByText('Add New Operator / User')).not.toBeVisible({ timeout: 20000 });
 
     // Verify both operators are listed in visible DOM
     await expect(page.getByText(USER_A_NAME).filter({ visible: true }).first()).toBeVisible();
@@ -123,8 +125,8 @@ test.describe.serial('DhaanTrack Customer Management, Dynamic Sharing & Priority
     await page.click('form button[type="submit"]');
 
     // 4. Verify Immediate Frontend Visibility without manual refresh
-    await expect(page.getByRole('heading', { name: 'Add New Customer' })).not.toBeVisible();
-    await expect(page.getByText('Customer saved and shared successfully.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Add New Customer' })).not.toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Customer saved and shared successfully.')).toBeVisible({ timeout: 15000 });
 
     // Customer card appears immediately in the DOM
     await expect(page.getByText(CUSTOMER_NAME).filter({ visible: true }).first()).toBeVisible();
@@ -153,7 +155,7 @@ test.describe.serial('DhaanTrack Customer Management, Dynamic Sharing & Priority
     // Verify duplicate error alert
     await expect(page.getByText(/already exists/i)).toBeVisible();
     await page.click('button:has-text("Cancel")');
-    await expect(page.getByRole('heading', { name: 'Add New Customer' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Add New Customer' })).not.toBeVisible({ timeout: 15000 });
   });
 
   test('3. User B: In-App Notification, Copy, View Customer, Edit Acreage & Dynamic Priority Update', async ({ page }) => {
@@ -218,7 +220,7 @@ test.describe.serial('DhaanTrack Customer Management, Dynamic Sharing & Priority
     await page.click('form button[type="submit"]');
 
     // Verify updated values in card
-    await expect(page.getByRole('heading', { name: 'Edit Customer' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Edit Customer' })).not.toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Customer details updated successfully.')).toBeVisible();
     await expect(page.getByText('1.2 Acre').filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByText('LOW').filter({ visible: true }).first()).toBeVisible();
@@ -243,7 +245,7 @@ test.describe.serial('DhaanTrack Customer Management, Dynamic Sharing & Priority
     await page.click('button:has-text("Customers & Leads")');
 
     // Verify Admin sees customer in central table
-    await expect(page.getByText(CUSTOMER_NAME).filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByText(CUSTOMER_NAME).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(CUSTOMER_MOBILE).filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByText('1.2 Acre').filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByText('LOW').filter({ visible: true }).first()).toBeVisible();

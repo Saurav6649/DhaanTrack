@@ -6,12 +6,15 @@ import { createMachineSchema, updateMachineSchema } from '../validators/index.js
 
 const router = Router();
 
-router.use(authenticate, requireAdmin);
+router.use(authenticate);
 
-router.post('/', validate({ body: createMachineSchema }), machineController.createMachine);
+// Read endpoints accessible to authenticated users & operators
 router.get('/', machineController.getAllMachines);
 router.get('/:id', machineController.getMachineById);
-router.patch('/:id', validate({ body: updateMachineSchema }), machineController.updateMachine);
-router.delete('/:id', machineController.deleteMachine);
+
+// Modification endpoints strictly restricted to Admin
+router.post('/', requireAdmin, validate({ body: createMachineSchema }), machineController.createMachine);
+router.patch('/:id', requireAdmin, validate({ body: updateMachineSchema }), machineController.updateMachine);
+router.delete('/:id', requireAdmin, machineController.deleteMachine);
 
 export default router;

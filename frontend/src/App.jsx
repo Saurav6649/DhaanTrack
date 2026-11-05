@@ -4,13 +4,15 @@ import { SWRConfig } from 'swr';
 import { swrConfig } from './api/swrConfig.js';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { ProtectedRoute } from './components/layout/ProtectedRoute.jsx';
+import { GuestRoute } from './components/layout/GuestRoute.jsx';
 import { AdminLayout } from './components/layout/AdminLayout.jsx';
 import { OperatorLayout } from './components/layout/OperatorLayout.jsx';
+import { LoadingSpinner } from './components/common/LoadingSpinner.jsx';
 
-// Pages
+// Public Pages
+import { LandingPage } from './pages/landing/LandingPage.jsx';
 import { LoginPage } from './pages/auth/LoginPage.jsx';
-
-// Admin Pages
+import { MachinesServicesPage } from './pages/machines/MachinesServicesPage.jsx';
 import { DashboardPage } from './pages/admin/DashboardPage.jsx';
 import { WorksPage } from './pages/admin/WorksPage.jsx';
 import { UsersMachinesPage } from './pages/admin/UsersMachinesPage.jsx';
@@ -34,12 +36,16 @@ import { WorkHistoryPage } from './pages/operator/WorkHistoryPage.jsx';
 import { ExpenseHistoryPage } from './pages/operator/ExpenseHistoryPage.jsx';
 import { OperatorCustomersPage } from './pages/operator/OperatorCustomersPage.jsx';
 
-// Root Index Redirector based on authenticated role
-const RootRedirector = () => {
+// Role-governed Dashboard Router
+const DashboardRedirector = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingSpinner label="Authenticating session..." size="lg" />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -59,9 +65,18 @@ export const App = () => {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Root & Auth */}
-            <Route path="/" element={<RootRedirector />} />
-            <Route path="/login" element={<LoginPage />} />
+            {/* Public Promotional Landing Page */}
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/login"
+              element={
+                <GuestRoute>
+                  <LoginPage />
+                </GuestRoute>
+              }
+            />
+            <Route path="/dashboard" element={<DashboardRedirector />} />
+            <Route path="/machines" element={<MachinesServicesPage />} />
 
             {/* Admin Portal (Protected: ADMIN) */}
             <Route

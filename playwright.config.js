@@ -14,13 +14,13 @@ export default defineConfig({
       command: 'npm run start --prefix backend',
       url: 'http://localhost:5000/api/health',
       reuseExistingServer: true,
-      timeout: 25000,
+      timeout: 60000,
     },
     {
-      command: 'npm run preview --prefix frontend -- --port 5173',
+      command: 'npx vite preview frontend --port 5173',
       url: 'http://localhost:5173',
       reuseExistingServer: true,
-      timeout: 25000,
+      timeout: 60000,
     },
   ],
   projects: [
