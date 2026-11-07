@@ -10,6 +10,7 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.jsx';
 import { BackButton } from '../../components/common/BackButton.jsx';
 import { Alert } from '../../components/common/Alert.jsx';
+import { formatCreatedDate } from '../../utils/formatters.js';
 import {
   Clock,
   Play,
@@ -222,7 +223,15 @@ export const TimerPage = () => {
                       </div>
                     </div>
 
-                    <Badge status={s.paymentStatus} />
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-700 border-amber-200">
+                        <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current opacity-70"></span>
+                        Not Started
+                      </span>
+                      <span className="text-[11px] text-gray-500 font-medium">
+                        Created: {formatCreatedDate(s.createdAt)}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Payment Summary & Action Strip */}

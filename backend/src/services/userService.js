@@ -201,7 +201,7 @@ export const updateUser = async (id, data, actor) => {
   if (!user) throw new Error('User not found.');
 
   // Prevent users from changing their own role or status
-  if (actor.role !== ROLES.ADMIN) {
+  if (actor.role !== ROLES.ADMIN && actor.role !== ROLES.SUPER_ADMIN) {
     delete data.role;
     delete data.status;
     delete data.assignedMachine;
@@ -256,7 +256,7 @@ export const disableUser = async (id, actor) => {
   const user = await User.findById(id);
   if (!user) throw new Error('User not found.');
 
-  if (user.role === ROLES.ADMIN) {
+  if (user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN) {
     throw new Error('Admin users cannot be disabled.');
   }
 
@@ -278,7 +278,7 @@ export const disableUser = async (id, actor) => {
 export const deleteUser = async (id, actor) => {
   const user = await User.findOne({ _id: id, isDeleted: { $ne: true } });
   if (!user) throw new Error('User not found.');
-  if (user.role === ROLES.ADMIN) {
+  if (user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN) {
     throw new Error('Admin users cannot be deleted.');
   }
 

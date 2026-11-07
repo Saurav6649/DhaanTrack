@@ -19,7 +19,7 @@ export const createUserSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   mobile: z.string().trim().regex(/^\d{10}$/, 'Mobile must be a valid 10-digit number'),
   assignedMachine: z.string().optional().nullable(),
-  role: z.enum([ROLES.ADMIN, ROLES.USER]).default(ROLES.USER),
+  role: z.enum([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.USER]).default(ROLES.USER),
   status: z.enum(['ACTIVE', 'DISABLED']).default('ACTIVE'),
 });
 

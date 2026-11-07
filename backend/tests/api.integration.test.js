@@ -23,6 +23,10 @@ describe('DhaanTrack Full API Integration Tests', () => {
   beforeAll(async () => {
     // Connect to test database
     await connectDB(ENV.MONGODB_URI);
+    await WorkSession.deleteMany({ customerName: { $regex: /Test Customer/i } });
+    await Expense.deleteMany({ note: { $regex: /Test Expense/i } });
+    await User.deleteMany({ userId: { $regex: /testoperator|disableduser/i } });
+    await Machine.deleteMany({ machineNumber: { $regex: /TEST-HARV/i } });
     await bootstrapAdmin();
   }, 20000);
 

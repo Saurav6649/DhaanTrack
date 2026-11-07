@@ -46,7 +46,7 @@ export const LoginPage = () => {
     try {
       setServerError('');
       const user = await login(values.userId, values.password);
-      if (user.role === 'ADMIN') {
+      if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
         navigate('/admin/dashboard', { replace: true });
       } else {
         navigate('/app/dashboard', { replace: true });

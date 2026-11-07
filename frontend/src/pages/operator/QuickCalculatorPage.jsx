@@ -5,6 +5,7 @@ import { Card } from '../../components/common/Card.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Alert } from '../../components/common/Alert.jsx';
 import { BackButton } from '../../components/common/BackButton.jsx';
+import { formatCalculatorDuration } from '../../utils/formatters.js';
 import { Timer, Clock, IndianRupee, Sparkles, CheckCircle, ArrowRight } from 'lucide-react';
 
 export const QuickCalculatorPage = () => {
@@ -23,6 +24,7 @@ export const QuickCalculatorPage = () => {
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('11:30');
   const [timeHourlyRate, setTimeHourlyRate] = useState(defaultRate);
+  const [timeDiffMinutes, setTimeDiffMinutes] = useState(150);
   const [timeDiffFormatted, setTimeDiffFormatted] = useState('2h 30m');
   const [timeDiffHours, setTimeDiffHours] = useState(2.5);
   const [method2Amount, setMethod2Amount] = useState(0);
@@ -57,6 +59,7 @@ export const QuickCalculatorPage = () => {
       const hPart = Math.floor(diffMin / 60);
       const mPart = diffMin % 60;
 
+      setTimeDiffMinutes(diffMin);
       setTimeDiffFormatted(`${hPart}h ${mPart}m`);
       setTimeDiffHours(hours);
 
@@ -119,7 +122,7 @@ export const QuickCalculatorPage = () => {
               ₹{method1Amount}
             </div>
             <p className="text-xs text-brand-100 font-medium mt-1">
-              For {totalMinutes} Minutes ({Number((totalMinutes / 60).toFixed(2))} Hours) at ₹{minutesHourlyRate}/hr
+              For {totalMinutes} Minutes ({formatCalculatorDuration(totalMinutes)}) at ₹{minutesHourlyRate}/hr
             </p>
           </div>
 
@@ -149,7 +152,7 @@ export const QuickCalculatorPage = () => {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {m} mins ({m / 60}h)
+                  {m} mins ({formatCalculatorDuration(m)})
                 </button>
               ))}
             </div>
@@ -179,9 +182,7 @@ export const QuickCalculatorPage = () => {
               ₹{method2Amount}
             </div>
             <div className="flex items-center justify-center gap-3 text-xs text-blue-100 font-semibold mt-1">
-              <span>Duration: {timeDiffFormatted}</span>
-              <span>•</span>
-              <span>{timeDiffHours} Hours</span>
+              <span>Duration: {formatCalculatorDuration(timeDiffMinutes)}</span>
               <span>•</span>
               <span>₹{timeHourlyRate}/hr</span>
             </div>
@@ -212,7 +213,7 @@ export const QuickCalculatorPage = () => {
 
             <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 flex items-center justify-between text-xs text-blue-900">
               <span className="font-medium">Calculated Time Elapsed:</span>
-              <span className="font-bold text-sm">{timeDiffFormatted} ({timeDiffHours} hrs)</span>
+              <span className="font-bold text-sm">{formatCalculatorDuration(timeDiffMinutes)}</span>
             </div>
 
             <div>

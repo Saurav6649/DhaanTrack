@@ -7,7 +7,10 @@ import { generateToken } from '../utils/jwt.js';
 import { logAudit } from '../utils/auditLogger.js';
 
 export const login = async ({ userId, password }) => {
-  const user = await User.findOne({ userId: userId.toLowerCase() }).select('+passwordHash').populate('assignedMachine');
+  const identifier = (userId || '').trim().toLowerCase();
+  const user = await User.findOne({
+    $or: [{ userId: identifier }, { email: identifier }],
+  }).select('+passwordHash').populate('assignedMachine');
 
   if (!user) {
     throw new Error('Invalid User ID or Password.');
@@ -54,6 +57,7 @@ export const changePassword = async (userId, { currentPassword, newPassword }) =
 
   const salt = await bcrypt.genSalt(10);
   user.passwordHash = await bcrypt.hash(newPassword, salt);
+  user.mustChangePassword = false;
   await user.save();
 
   await logAudit({

@@ -13,7 +13,8 @@ export const AuthProvider = ({ children }) => {
 
   const user = data?.user || null;
   const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'ADMIN';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const isOperator = user?.role === 'USER';
 
   const login = async (userId, password) => {
@@ -60,6 +61,7 @@ export const AuthProvider = ({ children }) => {
         user,
         isAuthenticated,
         isAdmin,
+        isSuperAdmin,
         isOperator,
         isLoading,
         login,

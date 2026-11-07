@@ -19,10 +19,19 @@ export const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
-    // Redirect to correct dashboard based on actual role
-    const redirectPath = user.role === 'ADMIN' ? '/admin/dashboard' : '/app/dashboard';
-    return <Navigate to={redirectPath} replace />;
+  if (requiredRole) {
+    const isAuthorized =
+      user.role === requiredRole ||
+      (requiredRole === 'ADMIN' && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN'));
+
+    if (!isAuthorized) {
+      // Redirect to correct dashboard based on actual role
+      const redirectPath =
+        user.role === 'ADMIN' || user.role === 'SUPER_ADMIN'
+          ? '/admin/dashboard'
+          : '/app/dashboard';
+      return <Navigate to={redirectPath} replace />;
+    }
   }
 
   return children;

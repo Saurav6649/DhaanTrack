@@ -20,6 +20,18 @@ const userSchema = new mongoose.Schema(
       maxlength: [50, 'User ID cannot exceed 50 characters'],
       match: [/^[a-z0-9_-]+$/, 'User ID can only contain letters, numbers, underscores, and dashes'],
     },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+      unique: true,
+      match: [/^\S+@\S+\.\S+$/, 'Email must be a valid email address'],
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
     passwordHash: {
       type: String,
       required: [true, 'Password is required'],
@@ -83,6 +95,12 @@ const userSchema = new mongoose.Schema(
     },
   }
 );
+
+userSchema.pre('validate', function () {
+  if (this.email === null || this.email === '' || this.email === undefined) {
+    this.email = undefined;
+  }
+});
 
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.passwordHash);

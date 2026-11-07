@@ -76,5 +76,6 @@ export const requireRole = (...roles) => {
   };
 };
 
-export const requireAdmin = requireRole(ROLES.ADMIN);
+export const requireAdmin = requireRole(ROLES.SUPER_ADMIN, ROLES.ADMIN);
+export const requireSuperAdmin = requireRole(ROLES.SUPER_ADMIN);
 export const requireOperator = requireRole(ROLES.USER);

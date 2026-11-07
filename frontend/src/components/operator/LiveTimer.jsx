@@ -4,6 +4,7 @@ import { api } from '../../api/client.js';
 import { Button } from '../common/Button.jsx';
 import { Badge } from '../common/Badge.jsx';
 import { Alert } from '../common/Alert.jsx';
+import { formatStartTime } from '../../utils/formatters.js';
 import { Play, Pause, CheckCircle2, RotateCw, Clock, User, Phone, MapPin, IndianRupee } from 'lucide-react';
 
 export const LiveTimer = ({ onCompleted }) => {
@@ -160,6 +161,11 @@ export const LiveTimer = ({ onCompleted }) => {
             <span className="flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-gray-400" /> {activeSession.fieldLocation}
             </span>
+            {activeSession.startedAt && (
+              <span className="flex items-center gap-1 text-brand-700 font-semibold">
+                <Clock className="w-3.5 h-3.5 text-brand-500" /> Start Time: {formatStartTime(activeSession.startedAt)}
+              </span>
+            )}
           </div>
         </div>
         <Badge status={activeSession.status} className="shrink-0" />

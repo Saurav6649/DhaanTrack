@@ -58,7 +58,9 @@ export const AdminLayout = () => {
         <div className="flex items-center gap-2.5">
           <img src="/logo.svg" alt="DhaanTrack" className="w-8 h-8 rounded-lg shadow-xs" />
           <span className="font-bold text-gray-900 tracking-tight">DhaanTrack</span>
-          <span className="text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.5 rounded">ADMIN</span>
+          <span data-testid="user-role-badge-mobile" className="text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.5 rounded">
+            {user?.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : 'ADMIN'}
+          </span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -153,8 +155,8 @@ export const AdminLayout = () => {
               <p className="text-xs font-semibold text-gray-900 truncate">{user?.name}</p>
               <p className="text-[11px] text-gray-400 truncate">@{user?.userId}</p>
             </div>
-            <span className="shrink-0 text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.5 rounded">
-              ADMIN
+            <span data-testid="user-role-badge" className="shrink-0 text-[10px] bg-brand-100 text-brand-800 font-bold px-1.5 py-0.5 rounded">
+              {user?.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : 'ADMIN'}
             </span>
           </div>
           <button

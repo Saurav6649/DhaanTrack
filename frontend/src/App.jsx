@@ -52,7 +52,7 @@ const DashboardRedirector = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return user?.role === 'ADMIN' ? (
+  return user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' ? (
     <Navigate to="/admin/dashboard" replace />
   ) : (
     <Navigate to="/app/dashboard" replace />

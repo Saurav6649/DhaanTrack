@@ -115,10 +115,12 @@ export const startWork = async (sessionId, user) => {
   }
 
   const now = new Date();
-  session.startedAt = now;
+  if (!session.startedAt) {
+    session.startedAt = now;
+  }
   session.lastResumeTime = now;
   session.status = WORK_STATUS.IN_PROGRESS;
-  session.totalWorkedSeconds = 0;
+  session.totalWorkedSeconds = session.totalWorkedSeconds || 0;
   await session.save();
 
   await logAudit({
@@ -127,7 +129,7 @@ export const startWork = async (sessionId, user) => {
     action: 'WORK_STARTED',
     entity: 'WorkSession',
     entityId: session._id,
-    metadata: { startedAt: now },
+    metadata: { startedAt: session.startedAt },
   });
 
   return session;
@@ -336,9 +338,27 @@ export const getWorkSessions = async (filters, user) => {
   }
 
   if (filters.startDate || filters.endDate) {
-    query.createdAt = {};
-    if (filters.startDate) query.createdAt.$gte = new Date(filters.startDate);
-    if (filters.endDate) query.createdAt.$lte = new Date(filters.endDate);
+    const dateQuery = {};
+    if (filters.startDate) dateQuery.$gte = new Date(filters.startDate);
+    if (filters.endDate) dateQuery.$lte = new Date(filters.endDate);
+
+    const dateOr = [
+      { createdAt: dateQuery },
+      { completedAt: dateQuery },
+      { startedAt: dateQuery },
+    ];
+
+    // If query is not explicitly restricted to completed status, also include currently active/queued works
+    if (!filters.status || filters.status !== WORK_STATUS.COMPLETED) {
+      dateOr.push({ status: { $in: [WORK_STATUS.PENDING, WORK_STATUS.IN_PROGRESS, WORK_STATUS.PAUSED] } });
+    }
+
+    if (query.$or) {
+      query.$and = [{ $or: query.$or }, { $or: dateOr }];
+      delete query.$or;
+    } else {
+      query.$or = dateOr;
+    }
   }
 
   if (filters.search) {
@@ -362,6 +382,12 @@ export const getWorkSessions = async (filters, user) => {
       delete obj.contractorRateSnapshot;
       delete obj.contractorAmount;
     }
+    let liveWorkedSeconds = obj.totalWorkedSeconds || 0;
+    if (obj.status === WORK_STATUS.IN_PROGRESS && obj.lastResumeTime) {
+      const liveDelta = Math.max(0, Math.floor((Date.now() - new Date(obj.lastResumeTime).getTime()) / 1000));
+      liveWorkedSeconds += liveDelta;
+    }
+    obj.liveWorkedSeconds = liveWorkedSeconds;
     return obj;
   });
 };
@@ -386,6 +412,12 @@ export const getWorkSessionById = async (id, user) => {
       delete obj.machineId.contractorHourlyRate;
     }
   }
+  let liveWorkedSeconds = obj.totalWorkedSeconds || 0;
+  if (obj.status === WORK_STATUS.IN_PROGRESS && obj.lastResumeTime) {
+    const liveDelta = Math.max(0, Math.floor((Date.now() - new Date(obj.lastResumeTime).getTime()) / 1000));
+    liveWorkedSeconds += liveDelta;
+  }
+  obj.liveWorkedSeconds = liveWorkedSeconds;
   return obj;
 };
 

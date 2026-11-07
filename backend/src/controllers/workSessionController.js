@@ -116,12 +116,14 @@ export const quickMinutesCalc = async (req, res, next) => {
   try {
     const { totalMinutes, hourlyRate } = req.body;
     const amount = calculateAmountByMinutes(totalMinutes, hourlyRate);
+    const formattedDuration = formatHoursAndMinutes(totalMinutes);
     res.json({
       success: true,
       data: {
         totalMinutes,
         hourlyRate,
         hours: Number((totalMinutes / 60).toFixed(2)),
+        formattedDuration,
         amount,
       },
     });
@@ -135,6 +137,7 @@ export const quickTimeCalc = async (req, res, next) => {
     const { startTime, endTime, hourlyRate } = req.body;
     const diff = calculateTimeDifference(startTime, endTime);
     const amount = calculateAmountByMinutes(diff.minutes, hourlyRate);
+    const formattedDuration = formatHoursAndMinutes(diff.minutes);
     res.json({
       success: true,
       data: {
@@ -142,7 +145,7 @@ export const quickTimeCalc = async (req, res, next) => {
         endTime,
         durationMinutes: diff.minutes,
         durationHours: diff.hours,
-        formattedDuration: diff.formatted,
+        formattedDuration,
         amount,
       },
     });

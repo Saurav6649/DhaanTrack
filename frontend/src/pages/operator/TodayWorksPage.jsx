@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
 import { api } from '../../api/client.js';
 import { Card } from '../../components/common/Card.jsx';
@@ -8,6 +8,11 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner.jsx';
 import { RecordPaymentModal } from '../../components/operator/RecordPaymentModal.jsx';
 import { RequestDeletionModal } from '../../components/operator/RequestDeletionModal.jsx';
 import { BackButton } from '../../components/common/BackButton.jsx';
+import {
+  formatRunningDuration,
+  formatStartTime,
+  formatCreatedDate,
+} from '../../utils/formatters.js';
 import {
   CalendarDays,
   Clock,
@@ -26,18 +31,31 @@ import {
 
 export const TodayWorksPage = () => {
   const today = new Date().toISOString().split('T')[0];
-  const { data, isLoading } = useSWR(`/api/work-sessions?startDate=${today}`);
+  const { data, isLoading } = useSWR(`/api/work-sessions?startDate=${today}`, { refreshInterval: 5000 });
   const sessions = data?.workSessions || [];
+
+  const { data: activeData } = useSWR('/api/work-sessions/active', { refreshInterval: 5000 });
+  const activeSession = activeData?.activeSession;
+
+  const [nowMs, setNowMs] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [selectedSessionForPayment, setSelectedSessionForPayment] = useState(null);
   const [selectedSessionForDeletion, setSelectedSessionForDeletion] = useState(null);
   const [expandedSessionId, setExpandedSessionId] = useState(null);
 
-  const formatHours = (seconds = 0) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
+  const getSessionDuration = (s) => {
+    if (!s) return 0;
+    const sessionObj = activeSession && String(activeSession._id) === String(s._id) ? { ...s, ...activeSession } : s;
+    const baseSeconds = Number(sessionObj.totalWorkedSeconds) || 0;
+    if (sessionObj.status === 'IN_PROGRESS' && sessionObj.lastResumeTime) {
+      const liveDelta = Math.max(0, Math.floor((nowMs - new Date(sessionObj.lastResumeTime).getTime()) / 1000));
+      return baseSeconds + liveDelta;
+    }
+    return baseSeconds;
   };
 
   const handleDeleteUnstarted = async (session) => {
@@ -107,7 +125,19 @@ export const TodayWorksPage = () => {
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <Badge status={s.status} />
-                    <Badge status={s.paymentStatus} />
+                    {s.status === 'PENDING' ? (
+                      <div className="flex flex-col items-end">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
+                          <span className="w-1.5 h-1.5 rounded-full mr-1 bg-current opacity-70"></span>
+                          Not Started
+                        </span>
+                        <span className="text-[10px] text-gray-400 mt-0.5 font-medium">
+                          Created: {formatCreatedDate(s.createdAt)}
+                        </span>
+                      </div>
+                    ) : (
+                      <Badge status={s.paymentStatus} />
+                    )}
                   </div>
                 </div>
 
@@ -176,7 +206,12 @@ export const TodayWorksPage = () => {
                 <div className="flex flex-wrap items-center justify-between text-xs text-gray-600 pt-1">
                   <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-gray-400" />
-                    <span>Duration: <strong className="text-gray-900">{formatHours(s.totalWorkedSeconds)}</strong> ({(s.totalWorkedSeconds / 3600).toFixed(2)}h)</span>
+                    <span>Duration: <strong className="text-gray-900">{formatRunningDuration(getSessionDuration(s))}</strong></span>
+                    {s.startedAt && (
+                      <span className="text-gray-500 font-medium ml-1">
+                        • Start Time: <strong className="text-gray-800">{formatStartTime(s.startedAt)}</strong>
+                      </span>
+                    )}
                   </div>
                   {s.fieldAreaKatha > 0 && (
                     <span className="text-gray-500">
