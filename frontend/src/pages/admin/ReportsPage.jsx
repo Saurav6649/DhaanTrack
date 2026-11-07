@@ -216,7 +216,7 @@ export const ReportsPage = () => {
       {isStatsLoading || !cards ? (
         <LoadingSpinner label="Compiling summary calculations..." />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Total Revenue */}
           <Card className="border-l-4 border-l-emerald-500 p-3 sm:p-4">
             <div className="flex items-center justify-between">
